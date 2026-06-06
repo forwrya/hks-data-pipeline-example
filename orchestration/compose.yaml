@@ -14,5 +14,14 @@ services:
       timeout: 30s
       retries: 3
       start_period: 5s
+
+  api:
+    build:
+      context: ../api/
+      additional_contexts:
+        project_root: ../
+    ports:
+      - "8000:8000"
+
 volumes:
   db_data:
