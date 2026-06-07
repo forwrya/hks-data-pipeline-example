@@ -1,5 +1,2 @@
 [pytest]
-pythonpath = [
-    "./samples",
-    "./api"
-]
+pythonpath = ["."]
