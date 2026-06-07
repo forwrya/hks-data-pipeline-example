@@ -3,7 +3,7 @@ env/
 
 .python-version
 
-orchestration/.env
+**/.env
 
 .vscode/
 

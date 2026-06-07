@@ -20,8 +20,15 @@ services:
       context: ../api/
       additional_contexts:
         project_root: ../
+    environment:
+      - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
     ports:
       - "8000:8000"
-
+    healthcheck:
+      test: curl http://localhost:8000/ping || exit 1
+      interval: 10s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
 volumes:
   db_data:
