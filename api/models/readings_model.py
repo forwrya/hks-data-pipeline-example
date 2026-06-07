@@ -8,11 +8,11 @@ I've implemented this Model with an ORM for convenience's sake, but other implem
 be slotted into the application by passing them to the corresponding View.
 """
 
-from sqlalchemy import Column, BigInteger, Double, Text, TIMESTAMP, Identity
+from sqlalchemy import Column, BigInteger, Double, Text, TIMESTAMP, Identity, JSON
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base
 
-from typing import List, Dict, Hashable, Any
+from typing import List, Dict, Any
 
 import dateutil
 
@@ -26,13 +26,14 @@ class SensorReading(declarative_base()):
     humidity = Column(Double)
     pressure = Column(Double)
     location = Column(Text, nullable=False)
+    anomalies = Column(JSON) #TODO: Normalize by making this a foreign key to an anomalies table?
 
 
 class ReadingsModel:
     def __init__(self, session_maker: async_sessionmaker[AsyncSession]) -> None:
         self.session_maker = session_maker
 
-    async def insert_readings(self, readings: List[Dict[Hashable, Any]]) -> int:
+    async def insert_readings(self, readings: List[Dict[str, Any]]) -> int:
         """
         Bulk inserts readings into the database.
 
@@ -53,7 +54,8 @@ class ReadingsModel:
                         temperature = new_reading["temperature"],
                         humidity = new_reading["humidity"],
                         pressure = new_reading["pressure"],
-                        location = new_reading["location"]
+                        location = new_reading["location"],
+                        anomalies = new_reading["anomalies"] if "anomalies" in new_reading else None
                     ) for new_reading in readings
                 ])
 
