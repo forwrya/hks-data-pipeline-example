@@ -1,4 +1,4 @@
-from generate_data import DataGenerator, save_to_csv
+from samples.generate_data import DataGenerator, save_to_csv
 
 import pytest
 import os
