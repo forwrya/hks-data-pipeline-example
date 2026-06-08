@@ -1,20 +1,51 @@
-import { Component, inject, signal } from '@angular/core';
-import { AsyncPipe } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SensorReading } from './sensorreading';
+
+import { MatTableModule, MatTableDataSource } from '@angular/material/table'
+import { ScrollingModule } from '@angular/cdk/scrolling'
+
 import { ReadingsAPI } from './readings-api';
+import { AnomalySensorReading } from './anomaly-sensor-reading';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, AsyncPipe],
+  imports: [RouterOutlet, MatTableModule, ScrollingModule],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
-  readings: Promise<SensorReading[]>;
   readingsAPI: ReadingsAPI = inject(ReadingsAPI);
+  readingsDataSource: MatTableDataSource<AnomalySensorReading>;
+
+  columnsToDisplay: string[];
 
   constructor() {
-    this.readings = this.readingsAPI.getRecentAnomalies();
+    this.readingsDataSource = new MatTableDataSource<AnomalySensorReading>([]);
+    this.columnsToDisplay = [
+      "anomaly_type",
+      "confidence_score",
+      "detected_at",
+      "sensor_id",
+      "timestamp",
+      "temperature",
+      "humidity",
+      "pressure",
+      "location"
+    ];
+    
+    this.readingsAPI.getRecentAnomalies().then(readings => {
+
+      // Make an entry per anomaly instead of per reading
+      const flattenedAnomalies = [];
+      for (const reading of readings) {
+
+        const { anomalies, ...shared } = reading;
+        for (const anomalyInfo of anomalies) {
+          flattenedAnomalies.push({...anomalyInfo, ...shared});
+        }
+      }
+
+      this.readingsDataSource.data = flattenedAnomalies;
+    });
   }
 }
