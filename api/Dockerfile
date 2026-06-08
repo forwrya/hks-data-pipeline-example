@@ -11,6 +11,7 @@ RUN pip install -r requirements.txt
 
 COPY ./app.py /api/
 COPY ./settings.py /api/
+COPY ./anomaly_detector.py /api/
 COPY ./routes/*.py /api/routes/
 COPY ./views/*.py /api/views/
 COPY ./models/*.py /api/models/

@@ -5,5 +5,6 @@ CREATE TABLE readings (
     temperature double precision,
     humidity double precision,
     pressure double precision,
-    location text NOT NULL
+    location text NOT NULL,
+    anomalies JSON
 );
