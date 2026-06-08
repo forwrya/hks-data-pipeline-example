@@ -10,12 +10,15 @@ import pytest
 from unittest.mock import Mock, AsyncMock
 
 from views.readings_view import ReadingsView
+from models.readings_model import SensorReading
 from samples.generate_data import DataGenerator, save_to_csv
 
 from fastapi import UploadFile, HTTPException
+
 from io import BytesIO
 import os
 import pandas as pd
+import dateutil
 
 @pytest.fixture()
 def default_test_model():
@@ -116,3 +119,108 @@ async def test_should_pass_readings_and_anomalies_to_model(default_test_model, a
             anomaly_count += len(actual_reading["anomalies"])
 
     assert anomaly_count > 0
+
+@pytest.mark.asyncio
+async def test_get_readings_with_no_filter_should_return_an_error(default_test_model):
+    test_view = ReadingsView(default_test_model)
+
+    with pytest.raises(HTTPException) as exception:
+        await test_view.get_readings()
+    
+    assert exception.value.status_code == 400
+
+@pytest.mark.parametrize("bad_start_time", ["0", "notatime", {}])
+@pytest.mark.asyncio
+async def test_get_readings_with_bad_start_time_should_return_an_error(default_test_model, bad_start_time):
+    test_view = ReadingsView(default_test_model)
+
+    with pytest.raises(HTTPException) as exception:
+        await test_view.get_readings(starting_timestamp=bad_start_time)
+    
+    assert exception.value.status_code == 400
+    assert "starting_timestamp" in exception.value.detail
+
+@pytest.mark.parametrize("bad_end_time", ["0", "notatime", {}])
+@pytest.mark.asyncio
+async def test_get_readings_with_bad_end_time_should_return_an_error(default_test_model, bad_end_time):
+    test_view = ReadingsView(default_test_model)
+
+    with pytest.raises(HTTPException) as exception:
+        await test_view.get_readings(ending_timestamp=bad_end_time)
+    
+    assert exception.value.status_code == 400
+    assert "ending_timestamp" in exception.value.detail 
+
+@pytest.mark.asyncio
+async def test_get_readings_with_timestamps_must_form_a_range(default_test_model):
+    test_view = ReadingsView(default_test_model)
+
+    starting_time = "2026-06-04T00:00:00.000000Z"
+    ending_time = "2026-06-01T00:00:00.000000Z"
+
+    with pytest.raises(HTTPException) as exception:
+        await test_view.get_readings(ending_timestamp=ending_time, starting_timestamp=starting_time)
+    
+    assert exception.value.status_code == 400
+    assert "must come after" in exception.value.detail 
+
+@pytest.mark.asyncio
+async def test_get_readings_with_timestamps_can_be_equal(default_test_model):
+    test_view = ReadingsView(default_test_model)
+
+    timestamp = "2026-06-04T00:00:00.000000Z"
+
+    # We can do an inefficient exact time lookup I guess
+    readings = await test_view.get_readings(ending_timestamp=timestamp, starting_timestamp=timestamp)
+    
+    assert len(readings) == 0
+
+@pytest.mark.asyncio
+async def test_get_readings_passes_filters_to_model(default_test_model):
+    test_view = ReadingsView(default_test_model)
+
+    expected_sensor_id = "SENSOR_002"
+    expected_starting_time = "2026-06-01T00:00:00.000000Z"
+    expected_ending_time = "2026-06-04T00:00:00.000000Z"
+    expected_anomalies_only = True
+        
+    readings = await test_view.get_readings(
+        sensor_id=expected_sensor_id,
+        ending_timestamp=expected_ending_time, 
+        starting_timestamp=expected_starting_time,
+        anomalies_only=expected_anomalies_only
+        )
+    
+    default_test_model.get_readings.assert_awaited_once()
+    default_test_model.get_readings.assert_called_once()
+
+    actual_sensor_id = default_test_model.get_readings.call_args.args[0]
+    actual_starting_datetime = default_test_model.get_readings.call_args.args[1]
+    actual_ending_datetime = default_test_model.get_readings.call_args.args[2]
+    actual_anomalies_only = default_test_model.get_readings.call_args.args[3]
+
+    assert expected_sensor_id == actual_sensor_id
+    assert dateutil.parser.parse(expected_starting_time) == actual_starting_datetime
+    assert dateutil.parser.parse(expected_ending_time) == actual_ending_datetime
+    assert expected_anomalies_only == actual_anomalies_only
+
+@pytest.mark.asyncio
+async def test_get_readings_removes_internal_ids_from_readings(default_test_model):
+    test_view = ReadingsView(default_test_model)
+
+    sensor_id = "SENSOR_002"
+
+    fake_reading = SensorReading(sensor_id=sensor_id, reading_id=1)
+
+    default_test_model.get_readings.return_value = [fake_reading]
+        
+    readings = await test_view.get_readings(sensor_id)
+    
+    default_test_model.get_readings.assert_awaited_once()
+    default_test_model.get_readings.assert_called_once()
+
+    assert len(readings) == 1
+ 
+    actual_reading = readings[0]
+    assert actual_reading["sensor_id"] == sensor_id
+    assert "reading_id" not in actual_reading.keys()
