@@ -8,3 +8,5 @@ CREATE TABLE readings (
     location text NOT NULL,
     anomalies JSON
 );
+
+CREATE INDEX ON readings (timestamp DESC) WHERE anomalies IS NOT NULL;

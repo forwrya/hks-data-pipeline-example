@@ -14,6 +14,7 @@ class ReadingsRoute:
         self.view = view
 
         self.router.add_api_route("/readings", self.upload_readings_csv, methods=["POST"])
+        self.router.add_api_route("/readings/anomalies", self.get_anomalies, methods=["GET"])
 
     async def upload_readings_csv(self, file:UploadFile):
         """
@@ -36,3 +37,19 @@ class ReadingsRoute:
         return {
             "new_readings_count": await self.view.ingest_csv_readings(file)
         }
+    
+    async def get_anomalies(self, sensor_id: str | None = None,
+                                  starting_timestamp: str | None = None, 
+                                  ending_timestamp: str | None = None):
+        """
+        Fetch anomalous sensor readings based on sensor_id and/or a range of timestamps.
+        At least one filter must be provided.
+        Args:
+            sensor_id: The ID of a specific sensor to fetch anomalies from. Optional
+            starting_timestamp: The oldest timestamp to filter anomalies by (inclusive). Optional
+            ending_timestamp: The most recent timestamp to filter anomalies by (inclusive). Optional
+        Returns:
+            Response body with a list of readings (w/ anomaly information) matching the filters.
+        """
+        
+        return await self.view.get_readings(sensor_id, starting_timestamp, ending_timestamp, anomalies_only=True)

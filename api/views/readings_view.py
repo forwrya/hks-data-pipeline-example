@@ -10,9 +10,11 @@ transforming the raw data into the correct format, interacting with other Views
 from fastapi import UploadFile, HTTPException
 import pandas as pd
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Sequence
+import dateutil
+from datetime import datetime
 
-from models.readings_model import ReadingsModel
+from models.readings_model import ReadingsModel, SensorReading
 from anomaly_detector import AnomalyDetector
 
 class ReadingsView:
@@ -80,3 +82,71 @@ class ReadingsView:
             anomaly.pop("sensor_data_id")
             reading_to_update["anomalies"].append(anomaly)
         return
+    
+    def reading_transformer(self, database_reading: SensorReading) -> Dict[str, Any]:
+        """
+        Transforms the raw database output into the format expected by the public API.
+
+        In this case, we'll just take out the internal reading_id and convert to plain python types.
+        """
+        return {
+            "sensor_id": database_reading.sensor_id,
+            "timestamp": database_reading.timestamp,
+            "temperature": database_reading.temperature,
+            "humidity": database_reading.humidity,
+            "pressure": database_reading.pressure,
+            "location": database_reading.location,
+            "anomalies": database_reading.anomalies
+        }
+    
+    async def get_readings(self, sensor_id: str | None = None,
+                                 starting_timestamp: str | None = None, 
+                                 ending_timestamp: str | None = None,
+                                 anomalies_only: bool = False) -> List[Dict[str, Any]]:
+        """
+        Fetch sensor readings based on one or more filters.
+        At least one filter must be provided.
+
+        This is where we would also want to implement pagination and a sort field.
+
+        Args:
+            sensor_id: The ID of a specific sensor to fetch anomalies from. Optional
+            starting_timestamp: The oldest timestamp to filter anomalies by (inclusive). Optional
+            ending_timestamp: The most recent timestamp to filter anomalies by (inclusive). Optional
+            anomalies_only: Whether or not to filter to only readings marked as anomalies. Optional
+        Returns:
+            Response body with a list of readings (w/ anomaly information) matching the filters.
+        """
+        readings = []
+        starting_datetime = None
+        ending_datetime = None
+
+        # Make sure we're using at least one filter so we're not requesting the entire table
+        if all(reading_filter is None for reading_filter in [sensor_id, starting_timestamp, ending_timestamp]):
+            raise HTTPException(400, "At least one filter must be provided.")
+
+        # Validate the timestamps, if provided
+        if starting_timestamp is not None:          
+            try:
+                starting_datetime = dateutil.parser.parse(starting_timestamp)
+            except:
+                raise HTTPException(400, "starting_timestamp is not a valid ISO date string.")
+        
+        if ending_timestamp is not None:          
+            try:
+                ending_datetime = dateutil.parser.parse(ending_timestamp)
+            except:
+                raise HTTPException(400, "ending_timestamp is not a valid ISO date string.")
+            
+        # If we're finding readings between a start and end time, make sure the end time is after the start
+        if ending_datetime is not None and starting_datetime is not None:
+            if ending_datetime < starting_datetime:
+                raise HTTPException(400, "ending_timestamp must come after starting_timestamp")
+            
+        # TODO: Here we could use a cache (like Redis) to cache the readings with the filter(s) as cache keys
+        
+        # Cache miss, get from database
+        readings = await self.model.get_readings(sensor_id, starting_datetime, ending_datetime, anomalies_only)
+
+        # Clean up the raw data and return
+        return [self.reading_transformer(reading) for reading in readings]
