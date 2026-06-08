@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
 
 import { MatTableModule, MatTableDataSource } from '@angular/material/table'
 import { ScrollingModule } from '@angular/cdk/scrolling'
@@ -9,7 +8,7 @@ import { AnomalySensorReading } from './anomaly-sensor-reading';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, MatTableModule, ScrollingModule],
+  imports: [MatTableModule, ScrollingModule],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
