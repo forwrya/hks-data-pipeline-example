@@ -2,7 +2,7 @@ name: Build API Docker Image
 
 on:
   workflow_run:
-    workflows: [Build and Test Frontend]
+    workflows: [Node.js CI]
     types: 
       - completed
 
