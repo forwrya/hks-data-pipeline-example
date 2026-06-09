@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from settings import Settings
 
@@ -32,6 +33,19 @@ readings_route = ReadingsRoute(readings_view)
 app.include_router(readings_route.router)
 
 print("Created routes")
+
+# Middleware
+origins = [
+    "*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 # Misc. routes
 @app.get("/ping")

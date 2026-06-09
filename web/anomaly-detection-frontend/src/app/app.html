@@ -1,0 +1,16 @@
+<cdk-virtual-scroll-viewport style="height: 100%; overflow: auto;" [itemSize]="52" [maxBufferPx]="1200" [minBufferPx]="400">
+  <table mat-table [dataSource]="readingsDataSource">
+    <mat-text-column name="sensor_id"></mat-text-column>
+    <mat-text-column name="timestamp"></mat-text-column>
+    <mat-text-column name="temperature"></mat-text-column>
+    <mat-text-column name="humidity"></mat-text-column>
+    <mat-text-column name="pressure"></mat-text-column>
+    <mat-text-column name="location"></mat-text-column>
+    <mat-text-column name="anomaly_type"></mat-text-column>
+    <mat-text-column name="confidence_score"></mat-text-column>
+    <mat-text-column name="detected_at"></mat-text-column>
+
+    <tr mat-header-row *matHeaderRowDef="columnsToDisplay; sticky: true"></tr>
+    <tr mat-row *matRowDef="let myRowData; columns: columnsToDisplay"></tr>
+  </table>
+</cdk-virtual-scroll-viewport>

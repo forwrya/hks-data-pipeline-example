@@ -4,8 +4,6 @@ services:
       context: ../database/
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql
     healthcheck:
@@ -22,10 +20,24 @@ services:
         project_root: ../
     environment:
       - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
-    ports:
-      - "8000:8000"
     healthcheck:
       test: curl http://localhost:8000/ping || exit 1
+      interval: 10s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
+
+  web:
+    build:
+      context: ../web/
+      args:
+        - FRONTEND_API_URL="${FRONTEND_API_URL}"
+    ports:
+      - "80:80"
+    environment:
+      - API_PROXY_URL="${API_PROXY_URL}"
+    healthcheck:
+      test: curl http://localhost:80 || exit 1
       interval: 10s
       timeout: 30s
       retries: 3
