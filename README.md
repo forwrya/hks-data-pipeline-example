@@ -8,7 +8,7 @@ To launch the system, navigate to the `/orchestration` directory and run:
 docker compose up
 ```
 Ensure that the environment variables referenced in `compose.yaml` are available, for example:
-``` json
+```
 POSTGRES_PASSWORD=
 DB_CONNECTION_STRING="postgresql+asyncpg://<db_user_name>:<db_password>@database:5432/<db_name>"
 API_PROXY_URL="http://api:8000/"
@@ -71,14 +71,14 @@ These layers have the following focuses/responsibilies:
 This API currently provides three main routes: `GET /ping`, `POST /readings`, and `GET /readings/anomalies`.
 
 #### POST /readings
-This is the route for uploading a .csv file containing a batch of sensor readings, such as those created by `generate_data.py`. In the real world, this would likely be called autonomously by a "new file uploaded" trigger on an S3 bucket, for example. In this case, your favorite API testing tool (Postman, Insomnia, et al.) is well-suited to add new data to the sytem.
+This is the route for uploading a .csv file containing a batch of sensor readings, such as those created by `generate_data.py`. In the real world, this would likely be called autonomously by a "new file uploaded" trigger on an S3 bucket, for example. In this case, your favorite API testing tool (Postman, Insomnia, et al.) is well-suited to add new data to the system.
 
-I decided to immediately run the `anomaly_detector.py` against the data after loading it from the .csv, but before writing anything to the database. This was primarily done for convenience as we have all the information we need to do the detection step without having to talk to the database. The throughput requirements are minimal since this isn't a real-time system, and even large .csv files with a high anomaly rate are quickly handled.
+I decided to immediately run `anomaly_detector.py` against the data after loading it from the .csv, but before writing anything to the database. This was primarily done for convenience as we have all the information we need to do the detection step without having to talk to the database. The throughput requirements are minimal since this isn't a real-time system, and even large .csv files with a high anomaly rate are quickly handled.
 
-In the real world where such a system could be receiving hundreds of thousands of readings a second, I would proposed a deferred processing step using a queue and batch workers. In this architecture, a triggering event, such as a batch of new data, would add a job to a queue. Then, worker nodes from a pool of compute resources would routinely pull jobs out of the queue, execute them, and write the results to the database. This would allow the public API to stay responsive while offloading the resource-intensive work to infrastructure that is easily scaled.
+In the real world where such a system could be receiving hundreds of thousands of readings a second, I would propose a deferred processing step using a queue and batch workers. In this architecture, a triggering event, such as a batch of new data, would add a job to a queue. Then, worker nodes from a pool of compute resources would routinely pull jobs out of the queue, execute them, and write the results to the database. This would allow the public API to stay responsive while offloading the resource-intensive work to infrastructure that is easily scaled.
 
 #### GET /readings/anomalies
-This route delivers the main use case for the application ("get the most recent anomalies"). Notice how the View and Model are equipped to get all readings from the `readings` table with any combination of search filters. The Route is able to implement a specific `GET /readings/anomalies` by calling the View in a specific way. Other routes like `GET /sensors/{sensor_id}/readings` or just `GET /readings` could be implemented with the same code.
+This route delivers the main use case for the application ("get the most recent anomalies"). Notice how the View and Model are equipped to get all readings from the `readings` table with any combination of search filters. The Route is able to implement a specific `GET /readings/anomalies` route by calling the View in a specific way. Other routes like `GET /sensors/{sensor_id}/readings` or just `GET /readings` could be implemented with the same code.
 ### Frontend
 The frontend is a barebones Angular single page app that shows the most recent anomalies in a table on page load:
 
@@ -96,4 +96,4 @@ The repo contains the following Github Actions that run on push or pull request 
 
 ![Github Actions](./docs/actions.png)
 
-The `build` actions are set up to only build the Docker image if the corresponding `test` action completed successfully. In a real-world scenario, the `build` actions could be extended to actually deploy the containers, likely by uploading them to a cloud Docker registry from where they would be pulled by cloud services.
+The `build` actions are set up to only build the Docker image if the corresponding `test` action completed successfully. In a real-world scenario, the `build` actions could be extended to actually deploy the containers, likely by uploading them to a cloud Docker registry from which they would be pulled by cloud services.
