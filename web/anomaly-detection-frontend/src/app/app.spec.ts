@@ -1,9 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
-import { MockBuilder } from 'ng-mocks';
+import { MockBuilder, MockInstance } from 'ng-mocks';
 import { ReadingsAPI } from './readings-api';
 
 describe('App', () => {
+  beforeEach(async () => {
+    // Mock API to promise an empty array when getRecentAnomalies is called
+    return MockInstance(ReadingsAPI, "getRecentAnomalies", () => {
+      return Promise.resolve([]);
+    })
+  })
+
   beforeEach(async () => {
     return MockBuilder(App, ReadingsAPI);
   });
